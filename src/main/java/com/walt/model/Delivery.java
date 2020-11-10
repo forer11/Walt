@@ -31,6 +31,7 @@ public class Delivery {
         this.restaurant = restaurant;
         this.customer = customer;
         this.deliveryTime = deliveryTime;
+        this.distance = 0.0 + new Random().nextDouble() * (20.0 - 0.0);
     }
 
     public Long getId() {
