@@ -12,13 +12,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest()
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -90,6 +91,8 @@ public class WaltTest {
     private void createCustomers(City jerusalem, City tlv, City haifa, City kfar) {
         Customer beethoven = new Customer("Beethoven", tlv, "Ludwig van Beethoven");
         Customer mozart = new Customer("Mozart", jerusalem, "Wolfgang Amadeus Mozart");
+        Customer gal = new Customer("Gal", jerusalem, "Yay City");
+        Customer shlong = new Customer("Shlong", jerusalem, "Way country");
         Customer chopin = new Customer("Chopin", haifa, "Frédéric François Chopin");
         Customer rachmaninoff = new Customer("Rachmaninoff", tlv, "Sergei Rachmaninoff");
         Customer bach = new Customer("Bach", tlv, "Sebastian Bach. Johann");
@@ -97,7 +100,8 @@ public class WaltTest {
         Customer chong = new Customer("Richongo", kfar, "Chong city");
 
 
-        customerRepository.saveAll(Lists.newArrayList(beethoven, mozart, chopin, rachmaninoff, bach, lior, chong));
+        customerRepository.saveAll(Lists.newArrayList(beethoven, mozart, chopin, rachmaninoff, bach, lior, chong
+                , gal, shlong));
     }
 
     private void createDrivers(City jerusalem, City tlv, City bash, City haifa, City kfar) {
@@ -122,8 +126,37 @@ public class WaltTest {
     @Test
     public void testBasics() {
 
-        assertEquals(((List<City>) cityRepository.findAll()).size(), 4);
+        assertEquals(((List<City>) cityRepository.findAll()).size(), 5);
         assertEquals((driverRepository.findAllDriversByCity(cityRepository.findByName("Beer-Sheva")).size()), 2);
+    }
+
+    @Test
+    public void createBadDelivery() {
+        Customer customer = customerRepository.findByName("Beethoven");
+        Date date = new Date();
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(customer, null, date);
+        });
+
+        String expectedMessage = "Error: One or more of the arguments are null";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
+    }
+
+    @Test
+    public void createDeliveryWithBadLocation() {
+        Customer customer = customerRepository.findByName("Beethoven");
+        Date date = new Date();
+        Restaurant restaurant = restaurantRepository.findByName("meat");
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(customer, restaurant, date);
+        });
+
+        String expectedMessage = "Error: Restaurant and Costumer Should be located at the same city";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
     }
 
     @Test
@@ -156,7 +189,7 @@ public class WaltTest {
     }
 
     @Test
-    public void create2DeliveriesFor1DriverWithHourTimeDifference() {
+    public void create2DeliveriesFor1DriverWith2HourTimeDifference() {
         Customer customer = customerRepository.findByName("Lior");
         Date date = new Date();
         Restaurant restaurant = restaurantRepository.findByName("doggies");
@@ -211,12 +244,52 @@ public class WaltTest {
         Delivery delivery4 = waltService.createOrderAndAssignDriver(customer4, restaurant4, date4);
         assertEquals(delivery3.getDriver().getId(), delivery4.getDriver().getId());
 
+        System.out.println("All Drivers rankings\n----------------------------------------------------");
         waltService.getDriverRankReport().forEach(driverDistance -> {
             System.out.println(driverDistance.getDriver().getName() + ":" + driverDistance.getTotalDistance());
         });
-        System.out.println("\n----------------------------------------------------");
+        System.out.println("\nrankings of tlv city\n----------------------------------------------------");
         waltService.getDriverRankReportByCity(customer2.getCity()).forEach(driverDistance -> {
             System.out.println(driverDistance.getDriver().getName() + ":" + driverDistance.getTotalDistance());
         });
+        System.out.println("\nrankings of kfar sava city\n----------------------------------------------------");
+        waltService.getDriverRankReportByCity(customer4.getCity()).forEach(driverDistance -> {
+            System.out.println(driverDistance.getDriver().getName() + ":" + driverDistance.getTotalDistance());
+        });
+    }
+
+    @Test
+    public void testDriverDistribution() {
+        Customer customer1 = customerRepository.findByName("Gal");
+        Customer customer2 = customerRepository.findByName("Shlong");
+        Customer customer3 = customerRepository.findByName("Mozart");
+
+        Driver robert = driverRepository.findByName("Robert");
+        Driver david = driverRepository.findByName("David");
+        Driver neta = driverRepository.findByName("Neta");
+        ArrayList<Long> driversIDs = new ArrayList<>();
+        driversIDs.add(robert.getId());
+        driversIDs.add(david.getId());
+        driversIDs.add(neta.getId());
+
+        Date date1 = new Date();
+        Date date2 = new Date();
+        date2.setTime(date2.getTime() + TimeUnit.HOURS.toMillis(2));
+        Date date3 = new Date();
+        date2.setTime(date3.getTime() + TimeUnit.HOURS.toMillis(2));
+
+        Restaurant restaurant = restaurantRepository.findByName("meat");
+
+        Delivery delivery1 = waltService.createOrderAndAssignDriver(customer1, restaurant, date1);
+        driversIDs.remove(delivery1.getDriver().getId());
+
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(customer2, restaurant, date2);
+        driversIDs.remove(delivery2.getDriver().getId());
+
+        Delivery delivery3 = waltService.createOrderAndAssignDriver(customer3, restaurant, date3);
+
+        assertEquals(delivery3.getDriver().getId(), driversIDs.get(0));
+
+
     }
 }

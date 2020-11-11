@@ -8,9 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -27,14 +25,20 @@ public class WaltServiceImpl implements WaltService {
 
     @Override
     public Delivery createOrderAndAssignDriver(Customer customer, Restaurant restaurant, Date deliveryTime) {
-        //TODO check restaurant and costumer city are the same
+        if (customer == null || restaurant == null || deliveryTime == null) {
+            throw new RuntimeException("Error: One or more of the arguments are null");
+        }
+        if (!customer.getCity().getId().equals(restaurant.getCity().getId())) {
+            throw new RuntimeException("Error: Restaurant and Costumer Should be located at the same city");
+        }
         List<Driver> availableDrivers = driverRepository.findAllDriversByCity(customer.getCity()).stream()
                 .filter(driver -> containsOverlappingDeliveries(driver, new Timestamp(deliveryTime.getTime())))
                 .collect(Collectors.toList());
 
         Driver minKmDriver = getMinKmDriver(availableDrivers);
         if (minKmDriver == null) {
-            return null; //TODO handle errors
+            System.err.println("No Driver is currently available"); // if we assume the costumer city is the city he order from
+            return null; //TODO maybe exception mechanism
         }
 
         Delivery delivery = new Delivery(minKmDriver, restaurant, customer, deliveryTime);
@@ -66,6 +70,7 @@ public class WaltServiceImpl implements WaltService {
     }
 
     private Driver getMinKmDriver(List<Driver> drivers) {
+        Collections.shuffle(drivers); // We want to keep fairness if we have multiple drivers with same min
         return drivers.stream()
                 .min(Comparator.comparingDouble(this::getDriverDeliveryKm))
                 .orElse(null);
