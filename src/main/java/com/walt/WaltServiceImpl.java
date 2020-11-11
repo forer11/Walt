@@ -44,12 +44,12 @@ public class WaltServiceImpl implements WaltService {
 
     @Override
     public List<DriverDistance> getDriverRankReport() {
-        return null;
+        return deliveryRepository.findDistancesByDriver();
     }
 
     @Override
     public List<DriverDistance> getDriverRankReportByCity(City city) {
-        return null;
+        return deliveryRepository.findCityDistancesByDriver(city);
     }
 
     private boolean containsOverlappingDeliveries(Driver driver, Timestamp deliveryTime) {

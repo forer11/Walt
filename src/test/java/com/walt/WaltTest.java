@@ -184,4 +184,39 @@ public class WaltTest {
         Delivery delivery2 = waltService.createOrderAndAssignDriver(customer2, restaurant2, date2);
         assertNull(delivery2);
     }
+
+    @Test
+    public void driverRankingTest1() {
+        Customer customer = customerRepository.findByName("Beethoven");
+        Date date = new Date();
+        Restaurant restaurant = restaurantRepository.findByName("vegan");
+        Delivery delivery = waltService.createOrderAndAssignDriver(customer, restaurant, date);
+
+        Customer customer2 = customerRepository.findByName("Beethoven");
+        Date date2 = new Date();
+        Restaurant restaurant2 = restaurantRepository.findByName("vegan");
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(customer2, restaurant2, date2);
+
+        assertNotEquals(delivery.getDriver().getId(), delivery2.getDriver().getId());
+
+        Customer customer3 = customerRepository.findByName("Lior");
+        Date date3 = new Date();
+        Restaurant restaurant3 = restaurantRepository.findByName("doggies");
+        Delivery delivery3 = waltService.createOrderAndAssignDriver(customer3, restaurant3, date3);
+
+        Customer customer4 = customerRepository.findByName("Richongo");
+        Date date4 = new Date();
+        date4.setTime(date4.getTime() + TimeUnit.HOURS.toMillis(2));
+        Restaurant restaurant4 = restaurantRepository.findByName("doggies");
+        Delivery delivery4 = waltService.createOrderAndAssignDriver(customer4, restaurant4, date4);
+        assertEquals(delivery3.getDriver().getId(), delivery4.getDriver().getId());
+
+        waltService.getDriverRankReport().forEach(driverDistance -> {
+            System.out.println(driverDistance.getDriver().getName() + ":" + driverDistance.getTotalDistance());
+        });
+        System.out.println("\n----------------------------------------------------");
+        waltService.getDriverRankReportByCity(customer2.getCity()).forEach(driverDistance -> {
+            System.out.println(driverDistance.getDriver().getName() + ":" + driverDistance.getTotalDistance());
+        });
+    }
 }
